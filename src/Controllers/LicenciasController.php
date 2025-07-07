@@ -38,7 +38,11 @@ class LicenciasController {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, 'activa')";
 
             $stmt = $this->conn->prepare($sql);
-            
+
+            //utiliza un array vacio si no hay caracteristicas
+            //para evitar errores al hacer json_encode
+            //esto es necesario porque si no se envian caracteristicas
+            //se envia un null y json_encode no lo maneja bien
             $caracteristicas = json_encode($datos['caracteristicas'] ?? []);
             
             $stmt->execute([
@@ -73,7 +77,7 @@ class LicenciasController {
             
             return [
                 'success' => true,
-                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
+                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)//convertido en array asociativo
             ];
         } catch (PDOException $e) {
             return [
@@ -118,7 +122,7 @@ class LicenciasController {
                 'estado_nuevo' => $estadoNuevo,
                 'fecha_cambio' => date('Y-m-d H:i:s')
             ]);
-
+            // Determinar la acción según el nuevo estado
             $accion = $estadoNuevo === 'activa' ? 'activacion' : 
                      ($estadoNuevo === 'inactiva' ? 'desactivacion' : 'actualizacion');
 

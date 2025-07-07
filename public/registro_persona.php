@@ -3,6 +3,8 @@ require_once __DIR__ . '/../src/Config/Database.php'; // Incluye la clase de con
 require_once __DIR__ . '/../vendor/autoload.php';      // Carga el autoloader de Composer para dependencias externas
 require_once __DIR__ . '/../src/Controllers/PersonaController.php'; // Incluye el controlador de personas
 require_once __DIR__ . '/../src/Config/permissions.php'; // Incluye las funciones de gestión de permisos
+
+use App\Controllers\PersonaController;
  
 session_start(); // Inicia la sesión para acceder a variables de usuario
 

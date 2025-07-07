@@ -22,17 +22,15 @@ use App\Config\Database;
 $db = new Database(); // Crea una instancia de la clase Database
 $conn = $db->getConnection(); // Obtiene la conexión PDO a la base de datos
 
-// Cargar residentes activos (rol 3, estado 1)
-$sqlResidentes = "SELECT documento, CONCAT(nombre, ' ', apellido) AS nombre_completo 
+// Cargar residentes activos (rol 3, estado activo)
+$sqlResidentes = "SELECT documento, CONCAT(nombre, ' ', apellido) AS nombre_completo, direccion_casa
                   FROM usuarios 
-                  WHERE id_rol = 3 AND id_estado = 1";
+                  WHERE id_rol = 3 AND id_estado_usuario = 4
+                  ORDER BY nombre ASC";
 $residentes = $conn->query($sqlResidentes)->fetchAll(PDO::FETCH_ASSOC); // Obtiene los residentes como array asociativo
 
-// Cargar vigilantes activos (rol 4, estado 1)
-$sqlVigilantes = "SELECT documento, CONCAT(nombre, ' ', apellido) AS nombre_completo 
-                  FROM usuarios 
-                  WHERE id_rol = 4 AND id_estado = 1";
-$vigilantes = $conn->query($sqlVigilantes)->fetchAll(PDO::FETCH_ASSOC); // Obtiene los vigilantes como array asociativo
+// Obtener información del vigilante logueado
+$vigilante_logueado = $_SESSION['user'] ?? null;
 
 // Mostrar mensaje si hay (por ejemplo, éxito o error en el registro)
 $mensaje = $_SESSION['mensaje_paquete'] ?? null; // Recupera el mensaje de la sesión si existe

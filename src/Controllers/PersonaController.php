@@ -95,15 +95,13 @@ class PersonaController {
                 $stmt->bindParam(':tiene_animales', $tiene_animales);
                 $stmt->bindParam(':cantidad_animales', $cantidad_animales);
                 $stmt->bindParam(':direccion_residencia', $direccion_residencia);
-                //ejecuta la consulta
+                
                 if (!$stmt->execute()) {
-                    //no deja cambiar cosas en la base de datos si hay un error
                     $conn->rollBack();
                     return "Error al registrar la persona.";
                 }
 
                 // Solo si es habitante, registra vehículo
-                 // Solo si es habitante, registra vehículo
                 if ($id_rol == 3) {
                     $id_tipo_vehi = $_POST['id_tipo_vehi'] ?? null;
                     $placa = $_POST['placa'] ?? null;
@@ -200,6 +198,85 @@ class PersonaController {
             return [
                 'success' => false,
                 'mensaje' => 'Error al crear el usuario'
+            ];
+        }
+    }
+
+    // Métodos para manejar los tipos y marcas
+    public function agregarTipoVehiculo($tipo) {
+        try {
+            $sql = "INSERT INTO tipo_vehiculos (tipo_vehiculos) VALUES (?)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$tipo]);
+            
+            return [
+                'success' => true,
+                'id' => $this->conn->lastInsertId(),
+                'mensaje' => 'Tipo de vehículo agregado exitosamente'
+            ];
+        } catch (PDOException $e) {
+            error_log("Error en agregarTipoVehiculo: " . $e->getMessage());
+            return [
+                'success' => false,
+                'mensaje' => 'Error al agregar tipo de vehículo'
+            ];
+        }
+    }
+
+    public function eliminarTipoVehiculo($id) {
+        try {
+            $sql = "DELETE FROM tipo_vehiculos WHERE id_tipo_vehi = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$id]);
+            
+            return [
+                'success' => $stmt->rowCount() > 0,
+                'mensaje' => $stmt->rowCount() > 0 ? 'Tipo de vehículo eliminado' : 'No se encontró el tipo de vehículo'
+            ];
+        } catch (PDOException $e) {
+            error_log("Error en eliminarTipoVehiculo: " . $e->getMessage());
+            return [
+                'success' => false,
+                'mensaje' => 'Error al eliminar tipo de vehículo'
+            ];
+        }
+    }
+
+    public function agregarMarca($marca) {
+        try {
+            $sql = "INSERT INTO marca (marca) VALUES (?)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$marca]);
+            
+            return [
+                'success' => true,
+                'id' => $this->conn->lastInsertId(),
+                'mensaje' => 'Marca agregada exitosamente'
+            ];
+        } catch (PDOException $e) {
+            error_log("Error en agregarMarca: " . $e->getMessage());
+            return [
+                'success' => false,
+                'mensaje' => 'Error al agregar marca'
+            ];
+        }
+    }
+
+    public function eliminarMarca($id) {
+        try {
+            $sql = "DELETE FROM marca WHERE id_marca = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$id]);
+            
+            return [
+                'success' => $stmt->rowCount() > 0,
+                'mensaje' => $stmt->rowCount() > 0 ? 'Marca eliminada' : 'No se encontró la marca'
+            ];
+        } catch (PDOException $e) {
+            error_log("Error en eliminarMarca: " . $e->getMessage());
+            return [
+                'success' => false,
+                'mensaje' => 'Error al eliminar marca'
             ];
         }
     }

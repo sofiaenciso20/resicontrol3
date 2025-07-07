@@ -14,12 +14,40 @@ if (!tienePermiso('gestion_reservas')) {
 // Instancia el controlador de reservas
 $controller = new ReservasController();
 
-// Obtiene la lista de reservas usando el método index() del controlador
-$reservas = $controller->index(); // ← nombre corregido
+// Obtener el filtro desde la URL si existe
+$filtro = $_GET['filter'] ?? null;
+
+// Obtiene la lista de reservas usando el método index() del controlador con filtro
+$reservas = $controller->index($filtro);
 
 // Define variables para el título de la página y el menú activo
 $titulo = 'Gestión de Reservas';
 $pagina_actual = 'gestion_reservas';
+
+// Ajustar el título según el filtro aplicado
+switch($filtro) {
+    case 'pendientes':
+        $titulo = 'Reservas Pendientes';
+        break;
+    case 'aprobadas':
+        $titulo = 'Reservas Aprobadas';
+        break;
+    case 'rechazadas':
+        $titulo = 'Reservas Rechazadas';
+        break;
+    case 'hoy':
+        $titulo = 'Reservas del Día';
+        break;
+    case 'activas':
+        $titulo = 'Mis Reservas Activas';
+        break;
+    case 'mes_actual':
+        $titulo = 'Reservas del Mes Actual';
+        break;
+}
+
+// Obtener estadísticas para mostrar en la vista
+$estadisticas = $controller->getEstadisticasReservas();
 
 // Inicia el buffer de salida para capturar el contenido de la vista
 ob_start();

@@ -91,6 +91,7 @@ ob_start();
                                     // Obtiene estadísticas de uso de la licencia
                                     $estadisticas = $licenciasController->obtenerEstadisticasUso($licencia['codigo_licencia']);
                                     // Determina la clase del badge según el estado
+                                    //validacion ternaria anidado
                                     $estado_clase = $licencia['estado'] === 'activa' ? 'success' : 
                                                  ($licencia['estado'] === 'inactiva' ? 'danger' : 'warning');
                                 ?>
@@ -331,144 +332,182 @@ ob_start();
 </div>
 
 <!-- Scripts específicos de la página -->
+<!-- Scripts específicos de la página -->
 <script>
-// Envía el formulario de creación de licencia por AJAX
-function crearLicencia(event) {
-    event.preventDefault();
-    const form = event.target;
-    const formData = new FormData(form);
-    const datos = {
-        nombre_residencial: formData.get('nombre_residencial'),
-        fecha_inicio: formData.get('fecha_inicio'),
-        fecha_fin: formData.get('fecha_fin'),
-        max_usuarios: parseInt(formData.get('max_usuarios')),
-        max_residentes: parseInt(formData.get('max_residentes')),
-        caracteristicas: formData.getAll('caracteristicas[]')
-    };
-    // Log para debugging
-    console.log('Datos del formulario:', datos);
+/*
+ * ====================================================================
+ * SCRIPT DE GESTIÓN DE LICENCIAS - SISTEMA RESIDENCIAL
+ * ====================================================================
+ * Este script maneja todas las operaciones CRUD de licencias:
+ * - Crear nuevas licencias
+ * - Editar licencias existentes
+ * - Ver detalles de licencias
+ * - Cambiar estado (activar/desactivar)
+ * - Obtener estadísticas de uso
+ * 
+ * Todas las operaciones se realizan via AJAX para mejor UX
+ * ====================================================================
+ */
 
+// ====================================================================
+// FUNCIÓN 1: CREAR NUEVA LICENCIA
+// ====================================================================
+/**
+ * Maneja la creación de nuevas licencias mediante AJAX
+ * @param {Event} event - Evento del formulario de creación
+ * @returns {boolean} - false para prevenir envío tradicional
+ */
+function crearLicencia(event) {
+    // PASO 1: Interceptar el envío del formulario
+    event.preventDefault(); // Cancela el comportamiento por defecto (recargar página)
+    
+    // PASO 2: Obtener el formulario y sus datos
+    const form = event.target; // Obtiene el formulario que disparó el evento
+    const formData = new FormData(form); // Crea objeto FormData con todos los campos
+    
+    // PASO 3: Estructurar los datos en formato JSON
+    const datos = {
+        // Obtener valores de campos de texto
+        nombre_residencial: formData.get('nombre_residencial'), // Nombre del complejo residencial
+        fecha_inicio: formData.get('fecha_inicio'),             // Fecha de inicio de vigencia
+        fecha_fin: formData.get('fecha_fin'),                   // Fecha de fin de vigencia
+        
+        // Convertir strings a números enteros
+        max_usuarios: parseInt(formData.get('max_usuarios')),     // Límite máximo de usuarios
+        max_residentes: parseInt(formData.get('max_residentes')), // Límite máximo de residentes
+        
+        // Obtener array de características seleccionadas (checkboxes)
+        caracteristicas: formData.getAll('caracteristicas[]')     // Array con todas las características marcadas
+    };
+    
+    // PASO 4: Log para debugging en consola del navegador
+    console.log('📋 Datos del formulario a enviar:', datos);
+
+    // PASO 5: Enviar datos al servidor mediante AJAX
     fetch('crear_licencia.php', {
-        method: 'POST',
+        method: 'POST',                                    // Método HTTP para enviar datos
         headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Content-Type': 'application/json',           // Especifica que enviamos JSON
+            'Accept': 'application/json'                  // Especifica que esperamos JSON como respuesta
         },
-        body: JSON.stringify(datos)
+        body: JSON.stringify(datos)                       // Convierte objeto JavaScript a string JSON
     })
+    // PASO 6: Procesar la respuesta del servidor
     .then(response => {
-        console.log('Status:', response.status);
+        // Log del código de estado HTTP (200, 404, 500, etc.)
+        console.log('📡 Código de estado HTTP:', response.status);
+        
+        // Convertir respuesta a texto y luego a JSON
         return response.text().then(text => {
             try {
+                // Intentar parsear el texto como JSON
                 return JSON.parse(text);
             } catch (e) {
-                console.error('Error parsing JSON:', text);
+                // Si el JSON es inválido, mostrar error y lanzar excepción
+                console.error('❌ Error al parsear JSON:', text);
                 throw new Error('Respuesta inválida del servidor');
             }
         });
     })
+    // PASO 7: Manejar el resultado de la operación
     .then(data => {
-        console.log('Respuesta del servidor:', data);
+        console.log('✅ Respuesta del servidor:', data);
+        
+        // Verificar si la operación fue exitosa
         if (data.success) {
-            alert('Licencia creada exitosamente');
-            window.location.reload();
+            // Operación exitosa: informar al usuario y recargar página
+            alert('✅ Licencia creada exitosamente');
+            window.location.reload(); // Recarga la página para mostrar la nueva licencia
         } else {
-            alert('Error al crear la licencia: ' + (data.mensaje || 'Error desconocido'));
+            // Operación fallida: mostrar mensaje de error
+            alert('❌ Error al crear la licencia: ' + (data.mensaje || 'Error desconocido'));
         }
     })
+    // PASO 8: Capturar y manejar errores
     .catch(error => {
-        console.error('Error:', error);
-        alert('Error al procesar la solicitud: ' + error.message);
+        // Log del error para debugging
+        console.error('💥 Error en la operación:', error);
+        
+        // Mostrar mensaje de error al usuario
+        alert('❌ Error al procesar la solicitud: ' + error.message);
     });
 
+    // PASO 9: Garantizar que el formulario no se envíe de forma tradicional
     return false;
 }
 
-// Redirige a la página de edición de licencia
-function editarLicencia(id) {
-    window.location.href = `editar_licencia.php?id=${id}`;
-}
-
-// Redirige a la página de detalles de licencia
-function verDetalles(id) {
-    window.location.href = `detalle_licencia.php?id=${id}`;
-}
-
-// Confirma y desactiva una licencia
-function desactivarLicencia(id) {
-    if (confirm('¿Está seguro de que desea desactivar esta licencia?')) {
-        actualizarEstadoLicencia(id, 'inactiva');
-    }
-}
-
-// Confirma y activa una licencia
-function activarLicencia(id) {
-    if (confirm('¿Está seguro de que desea activar esta licencia?')) {
-        actualizarEstadoLicencia(id, 'activa');
-    }
-}
-
-// Envía la solicitud para cambiar el estado de la licencia
-function actualizarEstadoLicencia(id, estado) {
-    fetch('actualizar_estado_licencia.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id, estado })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
-            alert('Error al actualizar el estado: ' + data.mensaje);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error al procesar la solicitud');
-    });
-}
-
-// Función para editar licencia (AJAX, llena el modal de edición)
+// ====================================================================
+// FUNCIÓN 2: EDITAR LICENCIA - CARGAR DATOS
+// ====================================================================
+/**
+ * Obtiene los datos de una licencia específica y los carga en el modal de edición
+ * @param {number} id - ID de la licencia a editar
+ */
 async function editarLicencia(id) {
     try {
+        // PASO 1: Solicitar datos de la licencia al servidor
+        console.log('🔄 Solicitando datos de la licencia ID:', id);
         const response = await fetch(`obtener_licencia.php?id=${id}`);
         const data = await response.json();
         
+        // PASO 2: Verificar si la solicitud fue exitosa
         if (data.success) {
+            // Extraer los datos de la licencia
             const licencia = data.data;
-            // Llenar el formulario de edición
-            document.getElementById('editar_licencia_id').value = licencia.id;
-            document.getElementById('editar_nombre_residencial').value = licencia.nombre_residencial;
-            document.getElementById('editar_fecha_fin').value = licencia.fecha_fin;
-            document.getElementById('editar_max_usuarios').value = licencia.max_usuarios;
-            document.getElementById('editar_max_residentes').value = licencia.max_residentes;
-            // Marcar características
+            console.log('📋 Datos de la licencia obtenidos:', licencia);
+            
+            // PASO 3: Llenar el formulario de edición con los datos existentes
+            document.getElementById('editar_licencia_id').value = licencia.id;                       // ID oculto
+            document.getElementById('editar_nombre_residencial').value = licencia.nombre_residencial; // Nombre
+            document.getElementById('editar_fecha_fin').value = licencia.fecha_fin;                   // Fecha fin
+            document.getElementById('editar_max_usuarios').value = licencia.max_usuarios;             // Límite usuarios
+            document.getElementById('editar_max_residentes').value = licencia.max_residentes;         // Límite residentes
+            
+            // PASO 4: Manejar las características (checkboxes)
+            // Parsear el JSON de características o usar array vacío si es null
             const caracteristicas = JSON.parse(licencia.caracteristicas || '[]');
+            
+            // Marcar o desmarcar cada checkbox según las características existentes
             document.getElementById('editar_caract_visitas').checked = caracteristicas.includes('gestion_visitas');
             document.getElementById('editar_caract_paquetes').checked = caracteristicas.includes('gestion_paquetes');
             document.getElementById('editar_caract_reservas').checked = caracteristicas.includes('gestion_reservas');
-            // Mostrar modal
-            new bootstrap.Modal(document.getElementById('modalEditarLicencia')).show();
+            
+            // PASO 5: Mostrar el modal de edición
+            const modal = new bootstrap.Modal(document.getElementById('modalEditarLicencia'));
+            modal.show();
+            console.log('✅ Modal de edición mostrado');
         } else {
-            alert('Error al cargar la licencia: ' + data.mensaje);
+            // Error al obtener los datos
+            alert('❌ Error al cargar la licencia: ' + data.mensaje);
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error al cargar la licencia');
+        // Capturar errores de red o parsing
+        console.error('💥 Error al cargar licencia:', error);
+        alert('❌ Error al cargar la licencia');
     }
 }
 
-// Envía el formulario de edición de licencia por AJAX
+// ====================================================================
+// FUNCIÓN 3: ACTUALIZAR LICENCIA - GUARDAR CAMBIOS
+// ====================================================================
+/**
+ * Procesa los cambios del formulario de edición y los guarda en el servidor
+ * @param {Event} event - Evento del formulario de edición
+ * @returns {boolean} - false para prevenir envío tradicional
+ */
 async function actualizarLicencia(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const datos = Object.fromEntries(formData.entries());
-    datos.caracteristicas = formData.getAll('caracteristicas[]');
+    // PASO 1: Interceptar el envío del formulario
+    event.preventDefault(); // Cancela el comportamiento por defecto
+    
+    // PASO 2: Capturar y procesar los datos del formulario
+    const formData = new FormData(event.target);                    // Obtener datos del formulario
+    const datos = Object.fromEntries(formData.entries());           // Convertir FormData a objeto plano
+    datos.caracteristicas = formData.getAll('caracteristicas[]');   // Manejar array de checkboxes por separado
+    
+    console.log('📋 Datos de actualización:', datos);
     
     try {
+        // PASO 3: Enviar datos actualizados al servidor
         const response = await fetch('actualizar_licencia.php', {
             method: 'POST',
             headers: {
@@ -477,106 +516,197 @@ async function actualizarLicencia(event) {
             body: JSON.stringify(datos)
         });
         
+        // PASO 4: Procesar la respuesta del servidor
         const data = await response.json();
         
         if (data.success) {
-            alert('Licencia actualizada exitosamente');
-            window.location.reload();
+            // Actualización exitosa
+            alert('✅ Licencia actualizada exitosamente');
+            window.location.reload(); // Recargar página para mostrar cambios
         } else {
-            alert('Error al actualizar la licencia: ' + data.mensaje);
+            // Error en la actualización
+            alert('❌ Error al actualizar la licencia: ' + data.mensaje);
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error al actualizar la licencia');
+        // Capturar errores de red o parsing
+        console.error('💥 Error al actualizar licencia:', error);
+        alert('❌ Error al actualizar la licencia');
     }
     
+    // PASO 5: Garantizar que el formulario no se envíe de forma tradicional
     return false;
 }
 
-// Muestra los detalles de la licencia en el modal
+// ====================================================================
+// FUNCIÓN 4: VER DETALLES DE LICENCIA
+// ====================================================================
+/**
+ * Obtiene y muestra información completa de una licencia en modal de solo lectura
+ * @param {number} id - ID de la licencia a mostrar
+ */
 async function verDetalles(id) {
     try {
+        // PASO 1: Obtener datos básicos de la licencia
+        console.log('🔍 Obteniendo detalles de la licencia ID:', id);
         const response = await fetch(`obtener_licencia.php?id=${id}`);
         const data = await response.json();
         
         if (data.success) {
             const licencia = data.data;
-            // Llenar los detalles
-            document.getElementById('detalle_codigo').textContent = licencia.codigo_licencia;
-            document.getElementById('detalle_residencial').textContent = licencia.nombre_residencial;
-            document.getElementById('detalle_estado').textContent = licencia.estado.toUpperCase();
+            
+            // PASO 2: Llenar campos básicos del modal
+            document.getElementById('detalle_codigo').textContent = licencia.codigo_licencia;        // Código único
+            document.getElementById('detalle_residencial').textContent = licencia.nombre_residencial; // Nombre residencial
+            document.getElementById('detalle_estado').textContent = licencia.estado.toUpperCase();    // Estado en mayúsculas
+            
+            // PASO 3: Formatear y mostrar fechas
+            // Convertir strings de fecha a objetos Date y formatear según configuración regional
             document.getElementById('detalle_fecha_inicio').textContent = new Date(licencia.fecha_inicio).toLocaleDateString();
             document.getElementById('detalle_fecha_fin').textContent = new Date(licencia.fecha_fin).toLocaleDateString();
-            // Mostrar estadísticas
+            
+            // PASO 4: Obtener y mostrar estadísticas de uso
             const estadisticas = await obtenerEstadisticas(licencia.codigo_licencia);
+            
+            // Mostrar estadísticas en formato "actual/máximo"
             document.getElementById('detalle_usuarios').textContent = `${estadisticas.total_usuarios}/${licencia.max_usuarios}`;
             document.getElementById('detalle_residentes').textContent = `${estadisticas.total_residentes}/${licencia.max_residentes}`;
-            // Mostrar características
+            
+            // PASO 5: Procesar y mostrar características
             const caracteristicas = JSON.parse(licencia.caracteristicas || '[]');
             const ulCaracteristicas = document.getElementById('detalle_caracteristicas');
+            
+            // Limpiar lista anterior
             ulCaracteristicas.innerHTML = '';
+            
+            // Crear elemento de lista para cada característica
             caracteristicas.forEach(caract => {
                 const li = document.createElement('li');
+                
+                // Formatear nombre: "gestion_visitas" -> "VISITAS"
                 li.textContent = caract.replace('gestion_', '').replace('_', ' ').toUpperCase();
+                
+                // Agregar elemento a la lista
                 ulCaracteristicas.appendChild(li);
             });
-            // Mostrar modal
-            new bootstrap.Modal(document.getElementById('modalDetallesLicencia')).show();
+            
+            // PASO 6: Mostrar modal de detalles
+            const modal = new bootstrap.Modal(document.getElementById('modalDetallesLicencia'));
+            modal.show();
+            console.log('✅ Modal de detalles mostrado');
         } else {
-            alert('Error al cargar los detalles: ' + data.mensaje);
+            alert('❌ Error al cargar los detalles: ' + data.mensaje);
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error al cargar los detalles');
+        console.error('💥 Error al cargar detalles:', error);
+        alert('❌ Error al cargar los detalles');
     }
 }
 
-// Obtiene estadísticas de uso de la licencia por AJAX
+// ====================================================================
+// FUNCIÓN 5: OBTENER ESTADÍSTICAS DE USO
+// ====================================================================
+/**
+ * Función auxiliar que obtiene estadísticas de uso de una licencia específica
+ * @param {string} codigo - Código de la licencia
+ * @returns {Object} - Objeto con estadísticas o valores por defecto
+ */
 async function obtenerEstadisticas(codigo) {
     try {
+        // PASO 1: Solicitar estadísticas al servidor
+        console.log('📊 Obteniendo estadísticas para licencia:', codigo);
         const response = await fetch(`obtener_estadisticas.php?codigo=${codigo}`);
         const data = await response.json();
+        
+        // PASO 2: Retornar estadísticas o valores por defecto
         return data.success ? data.data : { total_usuarios: 0, total_residentes: 0 };
     } catch (error) {
-        console.error('Error:', error);
+        // En caso de error, retornar valores por defecto
+        console.error('💥 Error al obtener estadísticas:', error);
         return { total_usuarios: 0, total_residentes: 0 };
     }
 }
 
-// Cambia el estado de la licencia (activa/inactiva) con confirmación
+// ====================================================================
+// FUNCIÓN 6: CAMBIAR ESTADO DE LICENCIA
+// ====================================================================
+/**
+ * Cambia el estado de una licencia (activa/inactiva) con confirmación del usuario
+ * @param {number} id - ID de la licencia
+ * @param {string} estado - Nuevo estado ('activa' o 'inactiva')
+ */
 async function cambiarEstadoLicencia(id, estado) {
-    if (!confirm(`¿Está seguro que desea ${estado === 'activa' ? 'activar' : 'desactivar'} esta licencia?`)) {
-        return;
+    // PASO 1: Solicitar confirmación al usuario
+    const accion = estado === 'activa' ? 'activar' : 'desactivar';
+    const confirmacion = confirm(`¿Está seguro que desea ${accion} esta licencia?`);
+    
+    if (!confirmacion) {
+        console.log('❌ Usuario canceló la operación');
+        return; // Salir si el usuario cancela
     }
+    
     try {
+        // PASO 2: Enviar solicitud de cambio de estado al servidor
+        console.log(`🔄 Cambiando estado de licencia ${id} a: ${estado}`);
         const response = await fetch('cambiar_estado_licencia.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ id, estado })
+            body: JSON.stringify({ id, estado }) // Shorthand para { id: id, estado: estado }
         });
+        
+        // PASO 3: Procesar la respuesta del servidor
         const data = await response.json();
+        
         if (data.success) {
-            alert('Estado de licencia actualizado exitosamente');
-            window.location.reload();
+            // Cambio exitoso
+            alert('✅ Estado de licencia actualizado exitosamente');
+            window.location.reload(); // Recargar página para reflejar cambios
         } else {
-            alert('Error al actualizar el estado: ' + data.mensaje);
+            // Error en el cambio
+            alert('❌ Error al actualizar el estado: ' + data.mensaje);
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error al actualizar el estado');
+        // Capturar errores de red o parsing
+        console.error('💥 Error al cambiar estado:', error);
+        alert('❌ Error al actualizar el estado');
     }
 }
 
-// Funciones de activación/desactivación para usar desde los botones
+// ====================================================================
+// FUNCIONES 7 y 8: WRAPPERS PARA ACTIVAR/DESACTIVAR
+// ====================================================================
+/**
+ * Función wrapper para activar una licencia
+ * @param {number} id - ID de la licencia a activar
+ */
 function activarLicencia(id) {
+    console.log('🟢 Solicitando activación de licencia:', id);
     cambiarEstadoLicencia(id, 'activa');
 }
 
+/**
+ * Función wrapper para desactivar una licencia
+ * @param {number} id - ID de la licencia a desactivar
+ */
 function desactivarLicencia(id) {
+    console.log('🔴 Solicitando desactivación de licencia:', id);
     cambiarEstadoLicencia(id, 'inactiva');
 }
+
+/*
+ * ====================================================================
+ * NOTAS IMPORTANTES:
+ * ====================================================================
+ * 1. Todas las funciones usan AJAX para evitar recargas de página
+ * 2. Se incluye manejo robusto de errores con try-catch
+ * 3. Se proporciona feedback visual al usuario con alerts
+ * 4. Los logs facilitan el debugging en desarrollo
+ * 5. Las funciones async/await mejoran la legibilidad del código
+ * 6. Se validan las respuestas del servidor antes de procesarlas
+ * 7. Se usan confirmaciones para operaciones críticas
+ * ====================================================================
+ */
 </script>
 
 <?php

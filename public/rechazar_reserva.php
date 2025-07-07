@@ -1,6 +1,3 @@
-rechazar_reserva 
-=====================
- 
 <?php
 // Incluimos el controlador necesario para manejar las reservas
 require_once __DIR__ . '/../vendor/autoload.php';

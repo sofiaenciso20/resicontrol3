@@ -1,107 +1,180 @@
 <?php
 // Archivo: src/Controllers/ResidentesController.php
-// Controlador encargado de gestionar acciones relacionadas con los residentes (habitantes del sistema)
+// Controlador encargado de gestionar acciones relacionadas con los residentes
 
-// Se incluye la clase de conexión a la base de datos
 require_once __DIR__ . '/../config/Database.php';
 use App\Config\Database;
 
-// Se define la clase del controlador
 class ResidentesController {
-    // Variable privada que almacenará la conexión a la base de datos
     private $conn;
 
-    // Constructor de la clase: inicializa la conexión cuando se crea una instancia
     public function __construct() {
-        $db = new Database();               // Se crea una instancia de la clase Database
-        $this->conn = $db->getConnection(); // Se obtiene y guarda la conexión
+        $db = new Database();
+        $this->conn = $db->getConnection();
     }
 
-    /**
-     * Obtiene la lista de residentes (u otros usuarios dependiendo del rol)
-     * @return array Lista de usuarios que cumplen la condición del rol
-     */
-    public function index() {
-        // Verifica si existe un rol en la sesión actual del usuario
+    public function index($filtro = null, $busqueda = null, $pagina = 1, $porPagina = 10) {
         $rol = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
 
-        // Si es vigilante (rol 4), solo puede ver los residentes (rol 3)
-        if ($rol == 4) {
-            $query = "SELECT documento, CONCAT(nombre, ' ', apellido) AS nombre, telefono, direccion_casa, id_estado_usuario
-                      FROM usuarios
-                      WHERE id_rol = 3";
-        }
-        // Si es administrador (rol 2), puede ver todos excepto al superadmin (rol 1)
-        elseif ($rol == 2) {
-            $query = "SELECT documento, CONCAT(nombre, ' ', apellido) AS nombre, telefono, direccion_casa, id_estado_usuario
-                      FROM usuarios
-                      WHERE id_rol != 1";
-        }
-        // Si es superadmin u otro rol, puede ver todos los usuarios
-        else {
-            $query = "SELECT documento, CONCAT(nombre, ' ', apellido) AS nombre, telefono, direccion_casa, id_estado_usuario
-                      FROM usuarios";
+        $query = "SELECT SQL_CALC_FOUND_ROWS documento, CONCAT(nombre, ' ', apellido) AS nombre, telefono, direccion_casa, 
+                         id_estado_usuario, id_rol, nombre as nombre_individual, apellido, correo
+                  FROM usuarios";
+
+        $condiciones = [];
+        $parametros = [];
+
+        switch($filtro) {
+            case 'activos':
+                $condiciones[] = "id_rol = 3";
+                $condiciones[] = "id_estado_usuario = 4";
+                break;
+            case 'inactivos':
+                $condiciones[] = "id_rol = 3";
+                $condiciones[] = "id_estado_usuario != 4";
+                break;
+            case 'residentes':
+                $condiciones[] = "id_rol = 3";
+                break;
+            default:
+                if ($rol == 4) {
+                    $condiciones[] = "id_rol = 3";
+                }
+                elseif ($rol == 2) {
+                    $condiciones[] = "id_rol != 1";
+                }
+                break;
         }
 
-        // Prepara y ejecuta la consulta
+        // Agregar búsqueda si existe
+        if (!empty($busqueda)) {
+            $condiciones[] = "(documento LIKE :busqueda OR 
+                             nombre LIKE :busqueda OR 
+                             apellido LIKE :busqueda OR 
+                             CONCAT(nombre, ' ', apellido) LIKE :busqueda OR
+                             telefono LIKE :busqueda OR
+                             direccion_casa LIKE :busqueda)";
+            $parametros[':busqueda'] = "%$busqueda%";
+        }
+
+        if (!empty($condiciones)) {
+            $query .= " WHERE " . implode(" AND ", $condiciones);
+        }
+
+        $query .= " ORDER BY id_rol ASC, nombre ASC";
+
+        // Agregar paginación
+        $offset = ($pagina - 1) * $porPagina;
+        $query .= " LIMIT $offset, $porPagina";
+
         $stmt = $this->conn->prepare($query);
-        $stmt->execute();
+        
+        foreach ($parametros as $param => $valor) {
+            $stmt->bindValue($param, $valor);
+        }
 
-        // Devuelve todos los resultados como array asociativo
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute();
+        $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Obtener el total de registros
+        $total = $this->conn->query("SELECT FOUND_ROWS()")->fetchColumn();
+
+        return [
+            'datos' => $resultados,
+            'total' => $total,
+            'pagina' => $pagina,
+            'porPagina' => $porPagina,
+            'totalPaginas' => ceil($total / $porPagina)
+        ];
     }
 
-    /**
-     * Obtiene los detalles de un residente específico por su documento
-     * @param string $id Documento del residente
-     * @return array Datos del residente (nombre, correo, dirección, etc.)
-     */
+    public function getResidentesActivos($busqueda = null, $pagina = 1, $porPagina = 10) {
+        return $this->index('activos', $busqueda, $pagina, $porPagina);
+    }
+
+    public function getResidentesInactivos($busqueda = null, $pagina = 1, $porPagina = 10) {
+        return $this->index('inactivos', $busqueda, $pagina, $porPagina);
+    }
+
+    public function getTodosLosResidentes($busqueda = null, $pagina = 1, $porPagina = 10) {
+        return $this->index('residentes', $busqueda, $pagina, $porPagina);
+    }
+
     public function obtenerDetalleResidente($id) {
-        $query = "SELECT documento, nombre, apellido, telefono, correo, direccion_casa, cantidad_personas, tiene_animales, cantidad_animales, direccion_residencia
+        $query = "SELECT documento, nombre, apellido, telefono, correo, direccion_casa, 
+                         cantidad_personas, tiene_animales, cantidad_animales, direccion_residencia, id_rol
                   FROM usuarios
-                  WHERE documento = :id ";
+                  WHERE documento = :id AND id_rol != 1";
         
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $id, PDO::PARAM_STR); // Asocia el parámetro ID
+        $stmt->bindParam(':id', $id, PDO::PARAM_STR);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC); // Devuelve solo un resultado
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Actualiza la información de un residente.
-     * Solo actualiza si el rol del usuario es residente (id_rol = 3)
-     * @param string $id Documento del residente
-     * @param array $datos Información nueva que se quiere actualizar
-     */
     public function actualizarResidente($id, $datos) {
-        // SQL para actualizar los campos del usuario con rol = 3
-        $query = "UPDATE usuarios SET 
-                    nombre = :nombre, 
-                    apellido = :apellido, 
-                    telefono = :telefono, 
-                    correo = :correo, 
-                    direccion_casa = :direccion_casa, 
-                    cantidad_personas = :cantidad_personas, 
-                    tiene_animales = :tiene_animales, 
-                    cantidad_animales = :cantidad_animales, 
-                    direccion_residencia = :direccion_residencia 
-                  WHERE documento = :id AND id_rol = 3";
+        // Verificar si el usuario es residente
+        $query_verificar = "SELECT id_rol FROM usuarios WHERE documento = :id";
+        $stmt_verificar = $this->conn->prepare($query_verificar);
+        $stmt_verificar->bindParam(':id', $id);
+        $stmt_verificar->execute();
+        $usuario = $stmt_verificar->fetch(PDO::FETCH_ASSOC);
+
+        if (!$usuario) {
+            return false;
+        }
+
+        // Construir la consulta según el rol
+        if ($usuario['id_rol'] == 3) {
+            $query = "UPDATE usuarios SET 
+                        nombre = :nombre, 
+                        apellido = :apellido, 
+                        telefono = :telefono, 
+                        correo = :correo, 
+                        direccion_casa = :direccion_casa, 
+                        cantidad_personas = :cantidad_personas, 
+                        tiene_animales = :tiene_animales, 
+                        cantidad_animales = :cantidad_animales, 
+                        direccion_residencia = :direccion_residencia 
+                      WHERE documento = :id";
+        } else {
+            $query = "UPDATE usuarios SET 
+                        nombre = :nombre, 
+                        apellido = :apellido, 
+                        telefono = :telefono, 
+                        correo = :correo, 
+                        direccion_casa = :direccion_casa
+                      WHERE documento = :id";
+        }
 
         $stmt = $this->conn->prepare($query);
         
-        // Se vinculan los valores al SQL para evitar inyecciones y errores
         $stmt->bindParam(':nombre', $datos['nombre']);
         $stmt->bindParam(':apellido', $datos['apellido']);
         $stmt->bindParam(':telefono', $datos['telefono']);
         $stmt->bindParam(':correo', $datos['correo']);
         $stmt->bindParam(':direccion_casa', $datos['direccion_casa']);
-        $stmt->bindParam(':cantidad_personas', $datos['cantidad_personas']);
-        $stmt->bindParam(':tiene_animales', $datos['tiene_animales']);
-        $stmt->bindParam(':cantidad_animales', $datos['cantidad_animales']);
-        $stmt->bindParam(':direccion_residencia', $datos['direccion_residencia']);
         $stmt->bindParam(':id', $id);
 
-        // Ejecuta la actualización
+        if ($usuario['id_rol'] == 3) {
+            $stmt->bindParam(':cantidad_personas', $datos['cantidad_personas']);
+            $stmt->bindParam(':tiene_animales', $datos['tiene_animales']);
+            $stmt->bindParam(':cantidad_animales', $datos['cantidad_animales']);
+            $stmt->bindParam(':direccion_residencia', $datos['direccion_residencia']);
+        }
+
+        return $stmt->execute();
+    }
+
+    public function getEstadisticasResidentes() {
+        $query = "SELECT 
+                    COUNT(*) as total_residentes,
+                    SUM(CASE WHEN id_estado_usuario = 4 THEN 1 ELSE 0 END) as activos,
+                    SUM(CASE WHEN id_estado_usuario != 4 THEN 1 ELSE 0 END) as inactivos
+                  FROM usuarios 
+                  WHERE id_rol = 3";
+        
+        $stmt = $this->conn->prepare($query);
         $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }

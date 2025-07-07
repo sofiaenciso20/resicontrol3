@@ -14,12 +14,28 @@ if (!tienePermiso('historial_visitas')) {
 // Instancia el controlador de visitas
 $controller = new VisitasController();
 
-// Obtiene la lista de visitas usando el método index() del controlador
-$visitas = $controller->index();
+// Obtener el filtro desde la URL si existe
+$filtro = $_GET['filter'] ?? null;
+
+// Obtiene la lista de visitas usando el método index() del controlador con filtro
+$visitas = $controller->index($filtro);
 
 // Variables para el layout (título de la página y menú activo)
 $titulo = 'Historial de Visitas';
 $pagina_actual = 'historial_visitas';
+
+// Ajustar el título según el filtro aplicado
+switch($filtro) {
+    case 'hoy':
+        $titulo = 'Visitas del Día';
+        break;
+    case 'pendientes':
+        $titulo = 'Visitas Pendientes';
+        break;
+    case 'activas':
+        $titulo = 'Mis Visitas Activas';
+        break;
+}
 
 // Elimina visitas pendientes cuya hora_ingreso + 1h es menor que la hora actual y la fecha es hoy
 $db = new \App\Config\Database(); // Instancia la clase de conexión a la base de datos

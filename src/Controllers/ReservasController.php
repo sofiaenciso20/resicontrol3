@@ -23,14 +23,15 @@ class ReservasController {
     /**
      * Muestra todas las reservas registradas en el sistema.
      * Si el usuario es residente, filtra por su documento.
+     * @param string $filtro Filtro opcional para aplicar (ej: 'pendientes', 'aprobadas', 'hoy')
      * @return array Lista de reservas con datos de zonas, horarios, estado y usuarios relacionados
      */
-    public function index() {
+    public function index($filtro = null) {
         // Obtiene el rol y documento del usuario autenticado
         $rol = $_SESSION['user']['role'] ?? null;
         $documento_usuario = $_SESSION['user']['documento'] ?? null;
 
-        // Consulta SQL para traer datos de todas las reservas y sus relaciones
+        // Consulta SQL base para traer datos de todas las reservas y sus relaciones
         $query = "SELECT
             r.id_reservas,
             r.fecha,
@@ -41,6 +42,7 @@ class ReservasController {
             CONCAT(u.nombre, ' ', u.apellido) as nombre_residente,
             u.documento as documento_residente,
             e.estado,
+            r.id_estado,
             CONCAT(a.nombre, ' ', a.apellido) as nombre_administrador,
             mz.motivo_zonas as motivo
             FROM reservas r
@@ -51,19 +53,123 @@ class ReservasController {
             LEFT JOIN usuarios a ON CAST(r.id_administrador AS CHAR) = a.documento
             LEFT JOIN motivo_zonas mz ON r.id_mot_zonas = mz.id_mot_zonas";
 
+        // Array para almacenar las condiciones WHERE
+        $condiciones = [];
+        $parametros = [];
+
         // Si el usuario es residente (rol 3), solo ve sus propias reservas
         if ($rol == 3) {
-            $query .= " WHERE CAST(r.id_usuarios AS CHAR) = :documento";
-            $stmt = $this->conn->prepare($query . " ORDER BY r.fecha DESC, h.horario ASC");
-            $stmt->bindParam(':documento', $documento_usuario);
-        } else {
-            // Si es administrador, puede ver todas las reservas
-            $stmt = $this->conn->prepare($query . " ORDER BY r.fecha DESC, h.horario ASC");
+            $condiciones[] = "CAST(r.id_usuarios AS CHAR) = :documento";
+            $parametros[':documento'] = $documento_usuario;
         }
 
-        // Ejecuta la consulta y devuelve los resultados como arreglo asociativo
+        // Aplicar filtros específicos
+        switch($filtro) {
+            case 'pendientes':
+                $condiciones[] = "r.id_estado = 1";
+                break;
+            case 'aprobadas':
+                $condiciones[] = "r.id_estado = 2";
+                break;
+            case 'rechazadas':
+                $condiciones[] = "r.id_estado = 3";
+                break;
+            case 'hoy':
+                $condiciones[] = "DATE(r.fecha) = CURDATE()";
+                break;
+            case 'activas':
+                // Para residentes: sus reservas pendientes
+                if ($rol == 3) {
+                    $condiciones[] = "r.id_estado = 1";
+                }
+                break;
+            case 'mes_actual':
+                $condiciones[] = "MONTH(r.fecha) = MONTH(CURDATE()) AND YEAR(r.fecha) = YEAR(CURDATE())";
+                break;
+        }
+
+        // Agregar condiciones WHERE si existen
+        if (!empty($condiciones)) {
+            $query .= " WHERE " . implode(" AND ", $condiciones);
+        }
+
+        // Agregar ORDER BY
+        $query .= " ORDER BY r.fecha DESC, h.horario ASC";
+
+        // Preparar y ejecutar la consulta
+        $stmt = $this->conn->prepare($query);
+        
+        // Enlazar parámetros si existen
+        foreach ($parametros as $param => $valor) {
+            $stmt->bindParam($param, $valor);
+        }
+
+        // Ejecutar la consulta
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Obtiene solo las reservas pendientes
+     * @return array Reservas pendientes
+     */
+    public function getReservasPendientes() {
+        return $this->index('pendientes');
+    }
+
+    /**
+     * Obtiene solo las reservas aprobadas
+     * @return array Reservas aprobadas
+     */
+    public function getReservasAprobadas() {
+        return $this->index('aprobadas');
+    }
+
+    /**
+     * Obtiene solo las reservas del día actual
+     * @return array Reservas del día
+     */
+    public function getReservasDelDia() {
+        return $this->index('hoy');
+    }
+
+    /**
+     * Obtiene las reservas activas del residente actual
+     * @return array Reservas activas del residente
+     */
+    public function getMisReservasActivas() {
+        return $this->index('activas');
+    }
+
+    /**
+     * Obtiene estadísticas de reservas
+     * @return array Estadísticas de reservas
+     */
+    public function getEstadisticasReservas() {
+        $rol = $_SESSION['user']['role'] ?? null;
+        $documento_usuario = $_SESSION['user']['documento'] ?? null;
+
+        $query = "SELECT 
+                    COUNT(*) as total_reservas,
+                    SUM(CASE WHEN id_estado = 1 THEN 1 ELSE 0 END) as pendientes,
+                    SUM(CASE WHEN id_estado = 2 THEN 1 ELSE 0 END) as aprobadas,
+                    SUM(CASE WHEN id_estado = 3 THEN 1 ELSE 0 END) as rechazadas,
+                    SUM(CASE WHEN DATE(fecha) = CURDATE() THEN 1 ELSE 0 END) as hoy
+                  FROM reservas";
+
+        // Si es residente, solo sus estadísticas
+        if ($rol == 3) {
+            $query .= " WHERE CAST(id_usuarios AS CHAR) = :documento";
+        }
+        
+        $stmt = $this->conn->prepare($query);
+        
+        if ($rol == 3) {
+            $stmt->bindParam(':documento', $documento_usuario);
+        }
+        
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -79,6 +185,7 @@ class ReservasController {
             CONCAT(u.nombre, ' ', u.apellido) as nombre_residente,
             u.documento as documento_residente,
             u.telefono as telefono_residente,
+            u.direccion_casa as direccion_casa_residente,
             e.estado,
             CONCAT(a.nombre, ' ', a.apellido) as nombre_administrador,
             mz.motivo_zonas as motivo

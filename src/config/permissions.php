@@ -17,7 +17,8 @@ $roles = [
 
 // Cada rol tiene acceso solo a ciertas páginas o funcionalidades del sistema
 $role_permissions = [
-    1 => ['*'], // Super Admin: acceso completo a todas las páginas del sistema
+    1 => ['gestion_licencias' 
+], // Super Admin: acceso completo a todas las páginas del sistema
 
     2 => [ // Administrador
         'registro_persona',     // Puede registrar personas

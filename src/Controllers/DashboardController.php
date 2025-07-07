@@ -1,58 +1,149 @@
 <?php
 
-// Definición del namespace (ubicación del controlador dentro de la estructura del proyecto)
 namespace App\Controllers;
 
-// Importación de clases necesarias
 use App\Config\Database;
 use PDO;
 
-// Declaración de la clase DashboardController
 class DashboardController {
-    private $db;    // Instancia de la clase Database
-    private $conn;  // Conexión PDO a la base de datos
+    private $db;
+    private $conn;
 
-    // Constructor: se ejecuta automáticamente al instanciar la clase
     public function __construct() {
-        $this->db = new Database();                 // Se crea la instancia de conexión
-        $this->conn = $this->db->getConnection();   // Se obtiene la conexión PDO
+        $this->db = new Database();
+        $this->conn = $this->db->getConnection();
     }
 
-    // Método público para obtener métricas según el rol del usuario
+    // Método existente para obtener métricas
     public function getMetrics($userId, $userRole) {
-        $metrics = []; // Arreglo donde se guardarán las métricas personalizadas
+        $metrics = [];
 
-        // Métricas para Administrador (rol 2) y Super Admin (rol 1)
         if (in_array($userRole, [1, 2])) {
             $metrics['total_residentes'] = $this->getTotalResidentes();
             $metrics['visitas_dia'] = $this->getVisitasHoy();
             $metrics['reservas_pendientes'] = $this->getReservasPendientes();
             $metrics['paquetes_pendientes'] = $this->getPaquetesPendientes();
         }
-
-        // Métricas para Vigilante (rol 4)
         else if ($userRole == 4) {
             $metrics['visitas_dia'] = $this->getVisitasHoy();
             $metrics['paquetes_pendientes'] = $this->getPaquetesPendientes();
             $metrics['reservas_dia'] = $this->getReservasHoy();
         }
-
-        // Métricas para Residente (rol 3)
         else if ($userRole == 3) {
             $metrics['mis_visitas'] = $this->getMisVisitas($userId);
             $metrics['mis_paquetes'] = $this->getMisPaquetes($userId);
             $metrics['mis_reservas'] = $this->getMisReservas($userId);
         }
 
-        // Retorna el arreglo con todas las métricas correspondientes
         return $metrics;
     }
 
-    // -------------------------
-    // MÉTODOS PRIVADOS
-    // -------------------------
+    // NUEVOS MÉTODOS PARA OBTENER DATOS FILTRADOS
 
-    // Cuenta los residentes activos (rol 3 y estado 4)
+    // Obtener solo residentes activos
+    public function getResidentesActivos() {
+        $stmt = $this->conn->prepare("
+            SELECT u.*, e.estado as nombre_estado
+            FROM usuarios u
+            LEFT JOIN estados_usuarios e ON u.id_estado_usuario = e.id_estado_usuario
+            WHERE u.id_rol = 3
+            AND u.id_estado_usuario = 4
+            ORDER BY u.nombre ASC
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Obtener solo visitas del día actual
+    public function getVisitasDelDia() {
+        $stmt = $this->conn->prepare("
+            SELECT v.*, u.nombre as nombre_residente, e.estado as nombre_estado
+            FROM visitas v
+            LEFT JOIN usuarios u ON v.documento = u.documento
+            LEFT JOIN estados_visitas e ON v.id_estado = e.id_estado
+            WHERE DATE(v.fecha_ingreso) = CURRENT_DATE
+            ORDER BY v.fecha_ingreso DESC
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Obtener solo reservas pendientes
+    public function getReservasSoloPendientes() {
+        $stmt = $this->conn->prepare("
+            SELECT r.*, u.nombre as nombre_usuario, a.nombre as nombre_area, e.estado as nombre_estado
+            FROM reservas r
+            LEFT JOIN usuarios u ON r.id_usuarios = u.documento
+            LEFT JOIN areas_comunes a ON r.id_area_comun = a.id_area_comun
+            LEFT JOIN estados_reservas e ON r.id_estado = e.id_estado
+            WHERE r.id_estado = 1
+            ORDER BY r.fecha ASC
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Obtener solo paquetes sin reclamar
+    public function getPaquetesSinReclamar() {
+        $stmt = $this->conn->prepare("
+            SELECT p.*, u.nombre as nombre_usuario, e.estado as nombre_estado
+            FROM paquetes p
+            LEFT JOIN usuarios u ON p.id_usuarios = u.documento
+            LEFT JOIN estados_paquetes e ON p.id_estado = e.id_estado
+            WHERE p.id_estado = 1
+            ORDER BY p.fecha_recepcion DESC
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Obtener visitas de un residente específico (solo activas)
+    public function getMisVisitasDetalle($userId) {
+        $stmt = $this->conn->prepare("
+            SELECT v.*, e.estado as nombre_estado
+            FROM visitas v
+            LEFT JOIN estados_visitas e ON v.id_estado = e.id_estado
+            WHERE v.documento = :userId
+            AND v.id_estado = 1
+            ORDER BY v.fecha_ingreso DESC
+        ");
+        $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Obtener paquetes de un residente específico (solo activos)
+    public function getMisPaquetesDetalle($userId) {
+        $stmt = $this->conn->prepare("
+            SELECT p.*, e.estado as nombre_estado
+            FROM paquetes p
+            LEFT JOIN estados_paquetes e ON p.id_estado = e.id_estado
+            WHERE p.id_usuarios = :userId
+            AND p.id_estado = 1
+            ORDER BY p.fecha_recepcion DESC
+        ");
+        $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Obtener reservas de un residente específico (solo activas)
+    public function getMisReservasDetalle($userId) {
+        $stmt = $this->conn->prepare("
+            SELECT r.*, a.nombre as nombre_area, e.estado as nombre_estado
+            FROM reservas r
+            LEFT JOIN areas_comunes a ON r.id_area_comun = a.id_area_comun
+            LEFT JOIN estados_reservas e ON r.id_estado = e.id_estado
+            WHERE r.id_usuarios = :userId
+            AND r.id_estado = 1
+            ORDER BY r.fecha ASC
+        ");
+        $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Métodos privados existentes (sin cambios)
     private function getTotalResidentes() {
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) as total
@@ -64,7 +155,6 @@ class DashboardController {
         return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     }
 
-    // Cuenta las visitas que ingresaron hoy (con estado 1)
     private function getVisitasHoy() {
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) as total
@@ -76,21 +166,18 @@ class DashboardController {
         return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     }
 
-    // Cuenta todas las reservas pendientes (estado = 1)
     private function getReservasPendientes() {
         $stmt = $this->conn->prepare("SELECT COUNT(*) as total FROM reservas WHERE id_estado = 1");
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     }
 
-    // Cuenta todos los paquetes pendientes (estado = 1)
     private function getPaquetesPendientes() {
         $stmt = $this->conn->prepare("SELECT COUNT(*) as total FROM paquetes WHERE id_estado = 1");
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     }
 
-    // Cuenta las reservas que ocurren hoy (para vigilantes)
     private function getReservasHoy() {
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) as total
@@ -101,7 +188,6 @@ class DashboardController {
         return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     }
 
-    // Cuenta las visitas de un residente específico (solo activas)
     private function getMisVisitas($userId) {
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) as total
@@ -114,7 +200,6 @@ class DashboardController {
         return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     }
 
-    // Cuenta los paquetes del residente actual (solo activos)
     private function getMisPaquetes($userId) {
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) as total
@@ -127,7 +212,6 @@ class DashboardController {
         return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     }
 
-    // Cuenta las reservas del residente actual (solo activas)
     private function getMisReservas($userId) {
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) as total

@@ -3,8 +3,9 @@ require_once __DIR__ . '/../src/Controllers/VisitasController.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 session_start();
-
+//obtiene el id de la url 
 $id = $_GET['id'] ?? null;
+// Determina si el usuario está en modo edición (solo Admin y SuperAdmin pueden editar)
 $modo_edicion = (
     isset($_GET['editar']) && $_GET['editar'] == 1 &&
     isset($_SESSION['user']) && in_array($_SESSION['user']['role'], [1, 2])

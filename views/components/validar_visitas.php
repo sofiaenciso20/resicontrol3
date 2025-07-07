@@ -7,9 +7,10 @@
           </div>
           <div class="card-body">
             <?php if (!empty($_SESSION['mensaje_visita'])): ?>
-              <div class="alert <?= strpos($_SESSION['mensaje_visita'], '✅') !== false ? 'alert-success' : 'alert-info' ?> d-flex align-items-center" role="alert">
+              <div class="alert <?= strpos($_SESSION['mensaje_visita'], '✅') !== false ? 'alert-success' : 'alert-danger' ?> d-flex align-items-center" role="alert">
                 <?= htmlspecialchars($_SESSION['mensaje_visita']) ?>
               </div>
+              <?php unset($_SESSION['mensaje_visita']); // Limpiar el mensaje después de mostrarlo ?>
             <?php endif; ?>
  
             <?php if (isset($_SESSION['codigo_visita_temp'])): ?>
@@ -20,14 +21,19 @@
               </div>
             <?php endif; ?>
  
-            <form method="POST" action="../validar_visitas.php">
+            <form method="POST" action="validar_visitas.php">
               <div class="mb-3">
                 <label class="form-label">Código de Verificación</label>
-                <input type="text" name="codigo" class="form-control" placeholder="Ingresa el código de 6 caracteres" required pattern="[A-Z0-9]{6}">
+                <input type="text" name="codigo" class="form-control" placeholder="Ingresa el código de 6 caracteres" required pattern="[A-Z0-9]{6}" maxlength="6" style="text-transform: uppercase;">
                 <div class="form-text">Ingresa el código que recibiste en tu correo electrónico.</div>
               </div>
-              <div class="text-end">
-                <button type="submit" class="btn btn-success">Validar</button>
+              <div class="d-flex justify-content-between">
+                <a href="historial_visitas.php" class="btn btn-outline-secondary">
+                  <i class="bi bi-arrow-left"></i> Ver Historial
+                </a>
+                <button type="submit" class="btn btn-success">
+                  <i class="bi bi-check-circle"></i> Validar Código
+                </button>
               </div>
             </form>
           </div>
@@ -35,6 +41,16 @@
       </div>
     </div>
   </div>
- 
- 
- 
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Convertir automáticamente a mayúsculas mientras se escribe
+    const codigoInput = document.querySelector('input[name="codigo"]');
+    codigoInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+
+    // Enfocar automáticamente el campo de código
+    codigoInput.focus();
+});
+</script>

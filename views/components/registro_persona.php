@@ -37,12 +37,12 @@
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label class="form-label">Nombre</label>
-                <input type="text" class="form-control" name="nombre" required pattern="[A-Za-zÁÉÍÓÚáéíóúñÑ ]+" minlength="2" maxlength="50">
+                <input type="text" class="form-control" name="nombre" required pattern="[A-Za-záéíóúÁÉÍÓÚñÑ ]+" minlength="2" maxlength="50">
                 <div class="invalid-feedback">Nombre inválido (solo letras, 2-50 caracteres).</div>
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label">Apellido</label>
-                <input type="text" class="form-control" name="apellido" required pattern="[A-Za-zÁÉÍÓÚáéíóúñÑ ]+" minlength="2" maxlength="50">
+                <input type="text" class="form-control" name="apellido" required pattern="[A-Za-záéíóúÁÉÍÓÚñÑ ]+" minlength="2" maxlength="50">
                 <div class="invalid-feedback">Apellido inválido (solo letras, 2-50 caracteres).</div>
               </div>
               <div class="col-md-6 mb-3">
@@ -52,12 +52,19 @@
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label">Tipo de Identificación</label>
-                <select class="form-select" name="tipo_identificacion" required>
-                  <option value="">Selecciona</option>
-                  <option value="1">C.C</option>
-                  <option value="2">T.I</option>
-                  <option value="3">C.E</option>
-                </select>
+                <div class="input-group">
+                  <select class="form-select" name="tipo_identificacion" required>
+                    <option value="">Selecciona</option>
+                    <option value="1">C.C</option>
+                    <option value="2">T.I</option>
+                    <option value="3">C.E</option>
+                  </select>
+                  <?php if ($es_admin): ?>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalEditarTipoIdentificacion">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                  <?php endif; ?>
+                </div>
                 <div class="invalid-feedback">Selecciona un tipo de identificación.</div>
               </div>
               <div class="col-md-6 mb-3">
@@ -125,12 +132,17 @@
                 <div class="row">
                   <div class="col-md-4 mb-3">
                     <label class="form-label">Tipo de Vehículo</label>
-                    <select class="form-select" name="id_tipo_vehi" id="tipo_vehiculo">
-                      <option value="">Seleccione</option>
-                      <?php foreach ($tipos as $tipo): ?>
-                        <option value="<?= $tipo['id_tipo_vehi'] ?>"><?= htmlspecialchars($tipo['tipo_vehiculos']) ?></option>
-                      <?php endforeach; ?>
-                    </select>
+                    <div class="input-group">
+                      <select class="form-select" name="id_tipo_vehi" id="tipo_vehiculo">
+                        <option value="">Seleccione</option>
+                        <?php foreach ($tipos as $tipo): ?>
+                          <option value="<?= $tipo['id_tipo_vehi'] ?>"><?= htmlspecialchars($tipo['tipo_vehiculos']) ?></option>
+                        <?php endforeach; ?>
+                      </select>
+                      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalEditarTipoVehiculo">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                    </div>
                     <div class="invalid-feedback">Selecciona un tipo de vehículo.</div>
                   </div>
                   <div class="col-md-4 mb-3">
@@ -140,12 +152,17 @@
                   </div>
                   <div class="col-md-4 mb-3">
                     <label class="form-label">Marca</label>
-                    <select class="form-select" name="id_marca" id="marca_vehiculo">
-                      <option value="">Seleccione</option>
-                      <?php foreach ($marcas as $marca): ?>
-                        <option value="<?= $marca['id_marca'] ?>"><?= htmlspecialchars($marca['marca']) ?></option>
-                      <?php endforeach; ?>
-                    </select>
+                    <div class="input-group">
+                      <select class="form-select" name="id_marca" id="marca_vehiculo">
+                        <option value="">Seleccione</option>
+                        <?php foreach ($marcas as $marca): ?>
+                          <option value="<?= $marca['id_marca'] ?>"><?= htmlspecialchars($marca['marca']) ?></option>
+                        <?php endforeach; ?>
+                      </select>
+                      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalEditarMarca">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                    </div>
                     <div class="invalid-feedback">Selecciona una marca.</div>
                   </div>
                 </div>
@@ -170,6 +187,120 @@
     </div>
   </div>
 </div>
+
+<!-- Modales para editar opciones -->
+<?php if ($es_admin): ?>
+  <!-- Modal para editar tipo de identificación -->
+  <div class="modal fade" id="modalEditarTipoIdentificacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Tipos de Identificación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formTipoIdentificacion">
+            <div class="mb-3">
+              <label class="form-label">Nuevo Tipo</label>
+              <input type="text" class="form-control" id="nuevoTipoIdentificacion" placeholder="Ej: Pasaporte">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Tipos Existentes</label>
+              <ul class="list-group" id="listaTiposIdentificacion">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  C.C
+                  <button type="button" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  T.I
+                  <button type="button" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  C.E
+                  <button type="button" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                </li>
+              </ul>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnGuardarTipoIdentificacion">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para editar tipos de vehículo -->
+  <div class="modal fade" id="modalEditarTipoVehiculo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Tipos de Vehículo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formTipoVehiculo">
+            <div class="mb-3">
+              <label class="form-label">Nuevo Tipo</label>
+              <input type="text" class="form-control" id="nuevoTipoVehiculo" placeholder="Ej: Motocicleta">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Tipos Existentes</label>
+              <ul class="list-group" id="listaTiposVehiculo">
+                <?php foreach ($tipos as $tipo): ?>
+                  <li class="list-group-item d-flex justify-content-between align-items-center" data-id="<?= $tipo['id_tipo_vehi'] ?>">
+                    <?= htmlspecialchars($tipo['tipo_vehiculos']) ?>
+                    <button type="button" class="btn btn-sm btn-outline-danger btnEliminarTipoVehiculo">Eliminar</button>
+                  </li>
+                <?php endforeach; ?>
+              </ul>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnGuardarTipoVehiculo">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para editar marcas de vehículo -->
+  <div class="modal fade" id="modalEditarMarca" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Marcas de Vehículo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formMarcaVehiculo">
+            <div class="mb-3">
+              <label class="form-label">Nueva Marca</label>
+              <input type="text" class="form-control" id="nuevaMarcaVehiculo" placeholder="Ej: Tesla">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Marcas Existentes</label>
+              <ul class="list-group" id="listaMarcasVehiculo">
+                <?php foreach ($marcas as $marca): ?>
+                  <li class="list-group-item d-flex justify-content-between align-items-center" data-id="<?= $marca['id_marca'] ?>">
+                    <?= htmlspecialchars($marca['marca']) ?>
+                    <button type="button" class="btn btn-sm btn-outline-danger btnEliminarMarca">Eliminar</button>
+                  </li>
+                <?php endforeach; ?>
+              </ul>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnGuardarMarca">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
 
 <!-- JS -->
 <script>
@@ -223,5 +354,120 @@
         input.classList.toggle('is-invalid', !input.checkValidity());
       });
     });
+
+    // Funcionalidad para los modales de edición
+    <?php if ($es_admin): ?>
+      // Manejar el modal de tipos de vehículo
+      document.getElementById('btnGuardarTipoVehiculo')?.addEventListener('click', function() {
+        const nuevoTipo = document.getElementById('nuevoTipoVehiculo').value.trim();
+        if (nuevoTipo) {
+          // Aquí iría la llamada AJAX para guardar en la base de datos
+          fetch('guardar_tipo_vehiculo.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ tipo: nuevoTipo })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Agregar el nuevo tipo a la lista
+              const lista = document.getElementById('listaTiposVehiculo');
+              const nuevoItem = document.createElement('li');
+              nuevoItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+              nuevoItem.dataset.id = data.id;
+              nuevoItem.innerHTML = `
+                ${nuevoTipo}
+                <button type="button" class="btn btn-sm btn-outline-danger btnEliminarTipoVehiculo">Eliminar</button>
+              `;
+              lista.appendChild(nuevoItem);
+              
+              // Agregar al select en el formulario principal
+              const select = document.querySelector('select[name="id_tipo_vehi"]');
+              const nuevaOpcion = document.createElement('option');
+              nuevaOpcion.value = data.id;
+              nuevaOpcion.textContent = nuevoTipo;
+              select.appendChild(nuevaOpcion);
+              
+              // Limpiar el input
+              document.getElementById('nuevoTipoVehiculo').value = '';
+              
+              // Mostrar mensaje de éxito
+              alert('Tipo de vehículo guardado exitosamente');
+            } else {
+              alert('Error al guardar: ' + data.mensaje);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error al guardar el tipo de vehículo');
+          });
+        }
+      });
+
+      // Manejar eliminación de tipos de vehículo
+      document.getElementById('listaTiposVehiculo')?.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btnEliminarTipoVehiculo')) {
+          const item = e.target.closest('li');
+          const id = item.dataset.id;
+          const tipo = item.textContent.trim().replace('Eliminar', '').trim();
+          
+          if (confirm(`¿Está seguro que desea eliminar el tipo "${tipo}"?`)) {
+            // Aquí iría la llamada AJAX para eliminar de la base de datos
+            fetch('eliminar_tipo_vehiculo.php', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ id: id })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                // Eliminar de la lista
+                item.remove();
+                
+                // Eliminar del select en el formulario principal
+                const select = document.querySelector('select[name="id_tipo_vehi"]');
+                const opcion = select.querySelector(`option[value="${id}"]`);
+                if (opcion) opcion.remove();
+                
+                alert('Tipo de vehículo eliminado exitosamente');
+              } else {
+                alert('Error al eliminar: ' + data.mensaje);
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Error al eliminar el tipo de vehículo');
+            });
+          }
+        }
+      });
+
+      // Manejar el modal de marcas de vehículo (similar al de tipos)
+      document.getElementById('btnGuardarMarca')?.addEventListener('click', function() {
+        const nuevaMarca = document.getElementById('nuevaMarcaVehiculo').value.trim();
+        if (nuevaMarca) {
+          // Llamada AJAX similar a la de tipos de vehículo
+          // ...
+        }
+      });
+
+      // Manejar eliminación de marcas (similar a tipos)
+      document.getElementById('listaMarcasVehiculo')?.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btnEliminarMarca')) {
+          // Lógica similar a la de tipos de vehículo
+          // ...
+        }
+      });
+
+      // Manejar el modal de tipos de identificación (similar)
+      document.getElementById('btnGuardarTipoIdentificacion')?.addEventListener('click', function() {
+        // Lógica similar
+        // ...
+      });
+    <?php endif; ?>
   });
 </script>

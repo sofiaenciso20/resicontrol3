@@ -4,8 +4,6 @@ use App\Controllers\DashboardController;
  
 $dashboardController = new DashboardController();
 $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
- 
-
 ?>
  
 <div class="container-fluid py-4">
@@ -30,10 +28,10 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
     </div>
  
     <div class="row g-4">
-        <?php if (in_array($user['role'], [1, 2])): // Admin y Super Admin ?>
+        <?php if (in_array($user['role'], [2])): // Admin y Super Admin ?>
             <!-- Total Residentes -->
             <div class="col-md-3">
-                <div class="card bg-primary text-white h-100">
+                <div class="card bg-primary text-white h-100 dashboard-card" data-filter="residentes" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['total_residentes']; ?></h1>
                         <h5 class="card-title">Total Residentes</h5>
@@ -43,7 +41,7 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
             </div>
             <!-- Visitas del Día -->
             <div class="col-md-3">
-                <div class="card bg-success text-white h-100">
+                <div class="card bg-success text-white h-100 dashboard-card" data-filter="visitas_dia" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['visitas_dia']; ?></h1>
                         <h5 class="card-title">Visitas del Día</h5>
@@ -53,7 +51,7 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
             </div>
             <!-- Reservas Pendientes -->
             <div class="col-md-3">
-                <div class="card bg-warning text-dark h-100">
+                <div class="card bg-warning text-dark h-100 dashboard-card" data-filter="reservas_pendientes" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['reservas_pendientes']; ?></h1>
                         <h5 class="card-title">Reservas Pendientes</h5>
@@ -63,7 +61,7 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
             </div>
             <!-- Paquetes Pendientes -->
             <div class="col-md-3">
-                <div class="card bg-info text-white h-100">
+                <div class="card bg-info text-white h-100 dashboard-card" data-filter="paquetes_pendientes" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['paquetes_pendientes']; ?></h1>
                         <h5 class="card-title">Paquetes sin Reclamar</h5>
@@ -75,7 +73,7 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
         <?php elseif ($user['role'] == 4): // Vigilante ?>
             <!-- Visitas del Día -->
             <div class="col-md-4">
-                <div class="card bg-success text-white h-100">
+                <div class="card bg-success text-white h-100 dashboard-card" data-filter="visitas_dia" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['visitas_dia']; ?></h1>
                         <h5 class="card-title">Visitas del Día</h5>
@@ -85,7 +83,7 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
             </div>
             <!-- Paquetes Pendientes -->
             <div class="col-md-4">
-                <div class="card bg-info text-white h-100">
+                <div class="card bg-info text-white h-100 dashboard-card" data-filter="paquetes_pendientes" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['paquetes_pendientes']; ?></h1>
                         <h5 class="card-title">Paquetes sin Reclamar</h5>
@@ -95,7 +93,7 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
             </div>
             <!-- Reservas del Día -->
             <div class="col-md-4">
-                <div class="card bg-warning text-dark h-100">
+                <div class="card bg-warning text-dark h-100 dashboard-card" data-filter="reservas_dia" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['reservas_dia']; ?></h1>
                         <h5 class="card-title">Reservas del Día</h5>
@@ -107,7 +105,7 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
         <?php elseif ($user['role'] == 3): // Residente ?>
             <!-- Mis Visitas -->
             <div class="col-md-4">
-                <div class="card bg-success text-white h-100">
+                <div class="card bg-success text-white h-100 dashboard-card" data-filter="mis_visitas" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['mis_visitas']; ?></h1>
                         <h5 class="card-title">Mis Visitas Pendientes</h5>
@@ -117,7 +115,7 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
             </div>
             <!-- Mis Paquetes -->
             <div class="col-md-4">
-                <div class="card bg-info text-white h-100">
+                <div class="card bg-info text-white h-100 dashboard-card" data-filter="mis_paquetes" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['mis_paquetes']; ?></h1>
                         <h5 class="card-title">Mis Paquetes por Recoger</h5>
@@ -127,7 +125,7 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
             </div>
             <!-- Mis Reservas -->
             <div class="col-md-4">
-                <div class="card bg-warning text-dark h-100">
+                <div class="card bg-warning text-dark h-100 dashboard-card" data-filter="mis_reservas" style="cursor: pointer;">
                     <div class="card-body text-center">
                         <h1 class="display-4"><?php echo $metrics['mis_reservas']; ?></h1>
                         <h5 class="card-title">Mis Reservas Pendientes</h5>
@@ -141,23 +139,53 @@ $metrics = $dashboardController->getMetrics($user['documento'], $user['role']);
  
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Añadir enlaces a las cards
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(card => {
+    // Añadir eventos de clic a las tarjetas del dashboard
+    const dashboardCards = document.querySelectorAll('.dashboard-card');
+    
+    dashboardCards.forEach(card => {
         card.addEventListener('click', function() {
-            const title = this.querySelector('.card-title').textContent.toLowerCase();
-           
-            if (title.includes('residentes')) {
-                window.location.href = 'gestion_residentes.php';
-            } else if (title.includes('visitas')) {
-                window.location.href = 'validar_visitas.php';
-            } else if (title.includes('reservas')) {
-                window.location.href = 'gestion_reservas.php';
-            } else if (title.includes('paquetes')) {
-                window.location.href = 'historial_paquetes.php';
+            const filter = this.getAttribute('data-filter');
+            
+            // Redirigir según el filtro específico
+            switch(filter) {
+                case 'residentes':
+                    window.location.href = 'gestion_residentes.php?filter=activos';
+                    break;
+                case 'visitas_dia':
+                    window.location.href = 'historial_visitas.php?filter=hoy';
+                    break;
+                case 'reservas_pendientes':
+                    window.location.href = 'gestion_reservas.php?filter=pendientes';
+                    break;
+                case 'reservas_dia':
+                    window.location.href = 'gestion_reservas.php?filter=hoy';
+                    break;
+                case 'paquetes_pendientes':
+                    window.location.href = 'historial_paquetes.php?filter=pendientes';
+                    break;
+                case 'mis_visitas':
+                    window.location.href = 'historial_visitas.php?filter=activas';
+                    break;
+                case 'mis_paquetes':
+                    window.location.href = 'historial_paquetes.php?filter=pendientes';
+                    break;
+                case 'mis_reservas':
+                    window.location.href = 'gestion_reservas.php?filter=activas';
+                    break;
+                default:
+                    console.log('Filtro no reconocido:', filter);
             }
+        });
+        
+        // Añadir efecto hover
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.02)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
         });
     });
 });
 </script>
- 

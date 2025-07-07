@@ -1,7 +1,4 @@
 <?php
-// Inicia la sesión para poder usar variables de sesión (como mensajes de error o éxito)
-session_start();
-
 // Incluye la clase Database para poder conectarnos a la base de datos
 require_once __DIR__ . '/../config/Database.php';
 
@@ -38,7 +35,7 @@ class ValidarVisitasController {
 
             // Consulta para verificar si el código es válido, no ha expirado y aún no ha sido usado (estado pendiente)
             $stmt = $this->conn->prepare("
-                SELECT id_visita
+                SELECT id_visita, nombre, apellido
                 FROM visitas
                 WHERE codigo = :codigo
                 AND codigo_expira > :now
@@ -72,20 +69,28 @@ class ValidarVisitasController {
 
                 // Ejecuta la actualización
                 if ($stmtUpdate->execute()) {
-                    // Guarda un mensaje de éxito en la sesión para mostrar en la vista
-                    $_SESSION['mensaje_visita'] = "✅ ¡Visita verificada exitosamente!";
+                    // Guarda un mensaje de éxito en la sesión para mostrar en el historial
+                    $_SESSION['mensaje_visita'] = "✅ ¡Visita de " . htmlspecialchars($visita['nombre'] . ' ' . $visita['apellido']) . " verificada exitosamente!";
+                    
+                    // Redirige al historial de visitas con filtro de visitas del día
+                    header("Location: /historial_visitas.php?filter=hoy&validated=1");
+                    exit();
                 } else {
                     // Si falla la actualización, guarda un mensaje de error
                     $_SESSION['mensaje_visita'] = "❌ Error al verificar la visita.";
+                    
+                    // En caso de error, vuelve al formulario de validación
+                    header("Location: /validar_visitas.php");
+                    exit();
                 }
             } else {
                 // Si no se encontró la visita (código inválido o expirado)
                 $_SESSION['mensaje_visita'] = "❌ Código inválido o expirado. Por favor, verifica e intenta nuevamente.";
+                
+                // En caso de código inválido, vuelve al formulario de validación
+                header("Location: /validar_visitas.php");
+                exit();
             }
-
-            // Redirige al usuario nuevamente al formulario de validación
-            header("Location: /validar_visitas.php");
-            exit();
 
         } else {
             // Si alguien intenta acceder a este método sin enviar un formulario, no se permite
@@ -110,10 +115,20 @@ class ValidarVisitasController {
         // Devuelve los resultados como un array asociativo
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Método para obtener estadísticas de validación
+     * @return array Estadísticas de códigos validados
+     */
+    public function getEstadisticasValidacion() {
+        $query = "SELECT 
+                    COUNT(*) as total_validadas_hoy,
+                    SUM(CASE WHEN id_estado = 1 THEN 1 ELSE 0 END) as pendientes_validacion
+                  FROM visitas 
+                  WHERE DATE(fecha_ingreso) = CURDATE()";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
-
-// Crea una instancia del controlador
-$controller = new ValidarVisitasController();
-
-// Ejecuta el método de validación si se accede a este archivo directamente
-$controller->validar();

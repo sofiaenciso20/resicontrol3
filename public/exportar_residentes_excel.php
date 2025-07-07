@@ -32,7 +32,7 @@ try {
         u.cantidad_animales,
         u.id_estado_usuario,
         u.fecha_registro,
-        r.nombre as nombre_rol
+        r.id_rol as rol
     FROM usuarios u
     LEFT JOIN roles r ON u.id_rol = r.id_rol
     WHERE u.id_rol = 3"; // Solo residentes (rol 3)
@@ -95,7 +95,7 @@ try {
             $residente['tiene_animales'] ?: 'No',
             $residente['cantidad_animales'] ?: '0',
             $estado,
-            $residente['nombre_rol'] ?: 'No asignado',
+            $residente['rol'] ?: 'No asignado',
             date('d/m/Y', strtotime($residente['fecha_registro']))
         ]);
     }

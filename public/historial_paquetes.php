@@ -14,12 +14,40 @@ if (!tienePermiso('historial_paquetes')) {
 // Instanciar el controlador de historial de paquetes
 $controller = new HistorialPaquetesController();
 
-// Obtiene la lista de paquetes usando el método index() del controlador
-$paquetes = $controller->index();
+// Obtener el filtro desde la URL si existe
+$filtro = $_GET['filter'] ?? null;
+
+// Obtiene la lista de paquetes usando el método index() del controlador con filtro
+$paquetes = $controller->index($filtro);
 
 // Variables para el layout (título de la página y menú activo)
 $titulo = 'Historial de Paquetes';
 $pagina_actual = 'historial_paquetes';
+
+// Ajustar el título según el filtro aplicado
+switch($filtro) {
+    case 'pendientes':
+        $titulo = 'Paquetes sin Reclamar';
+        break;
+    case 'entregados':
+        $titulo = 'Paquetes Entregados';
+        break;
+    case 'hoy':
+        $titulo = 'Paquetes Recibidos Hoy';
+        break;
+    case 'semana':
+        $titulo = 'Paquetes de la Semana';
+        break;
+    case 'mes_actual':
+        $titulo = 'Paquetes del Mes';
+        break;
+    case 'mis_pendientes':
+        $titulo = 'Mis Paquetes por Recoger';
+        break;
+}
+
+// Obtener estadísticas para mostrar en la vista
+$estadisticas = $controller->getEstadisticasPaquetes();
 
 // Inicia el buffer de salida para capturar el contenido de la vista
 ob_start();

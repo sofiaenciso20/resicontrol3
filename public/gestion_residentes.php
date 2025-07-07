@@ -1,34 +1,52 @@
 <?php
-require_once __DIR__ . '/../vendor/autoload.php'; // Carga el autoloader de Composer para las dependencias externas
-require_once __DIR__ . '/../src/Controllers/ResidentesController.php'; // Incluye el controlador de residentes
-require_once __DIR__ . '/../src/Config/permissions.php'; // Incluye las funciones de gestión de permisos
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../src/Controllers/ResidentesController.php';
+require_once __DIR__ . '/../src/Config/permissions.php';
 
-session_start(); // Inicia la sesión para acceder a variables de usuario
+session_start();
 
-// Verifica si el usuario tiene permiso para gestionar residentes
 if (!tienePermiso('gestion_residentes')) {
-    header('Location: dashboard.php'); // Si no tiene permiso, redirige al dashboard
-    exit; // Detiene la ejecución del script
+    header('Location: dashboard.php');
+    exit;
 }
 
-// Instancia el controlador de residentes
 $controller = new ResidentesController();
 
-// Obtiene la lista de residentes usando el método index() del controlador
-$visitas = $controller->index(); // (Probablemente debería llamarse $residentes, pero depende del controlador)
+// Obtener parámetros
+$filtro = $_GET['filter'] ?? null;
+$busqueda = $_GET['busqueda'] ?? null;
+$pagina = isset($_GET['pagina']) ? max(1, intval($_GET['pagina'])) : 1;
+$porPagina = 10;
 
-// Define variables para el título de la página y el menú activo
+// Obtener datos con paginación y búsqueda
+$resultados = $controller->index($filtro, $busqueda, $pagina, $porPagina);
+$visitas = $resultados['datos']; // Mantener compatibilidad
+$totalPaginas = $resultados['totalPaginas'];
+
+// Definir título
 $titulo = 'Gestión de Residentes';
+switch($filtro) {
+    case 'activos':
+        $titulo = 'Residentes Activos';
+        break;
+    case 'inactivos':
+        $titulo = 'Residentes Inactivos';
+        break;
+    case 'residentes':
+        $titulo = 'Todos los Residentes';
+        break;
+}
+
+// Obtener estadísticas
+$estadisticas = $controller->getEstadisticasResidentes();
+
+// Variables para la vista
 $pagina_actual = 'gestion_residentes';
 
-// Inicia el buffer de salida para capturar el contenido de la vista
+// Iniciar buffer
 ob_start();
-
-// Incluye el componente de la vista que muestra la gestión de residentes
 require_once __DIR__ . '/../views/components/gestion_residentes.php';
-
-// Guarda el contenido capturado en la variable $contenido
 $contenido = ob_get_clean();
 
-// Incluye el layout principal de la aplicación, que usará $contenido para mostrar la página completa
+// Incluir layout
 require_once __DIR__ . '/../views/layout/main.php';
